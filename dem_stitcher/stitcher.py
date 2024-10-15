@@ -25,6 +25,7 @@ from .rio_tools import (
     translate_dataset,
     translate_profile,
     update_profile_resolution,
+    expand_arr_to_bounds
 )
 
 RASTER_READERS = {
@@ -173,6 +174,7 @@ def merge_and_transform_dem_tiles(
     dst_resolution: Union[float, tuple[float]] = None,
     num_threads_reproj: int = 5,
     merge_nodata_value: float = np.nan,
+    fill_to_bounds: bool = False,
     n_threads_for_reading_tile_data: int = 5,
 ) -> tuple[np.ndarray, dict]:
     dem_arr, dem_profile = merge_tile_datasets_within_extent(
@@ -192,6 +194,9 @@ def merge_and_transform_dem_tiles(
 
     if dem_profile['crs'] != CRS.from_epsg(4326):
         raise ValueError('CRS must be epsg 4269 or 4326')
+    
+    if fill_to_bounds:
+        dem_arr, dem_profile = expand_arr_to_bounds(dem_arr, dem_profile, bounds, fill_value=merge_nodata_value)
 
     if dst_ellipsoidal_height:
         geoid_name = DEM2GEOID[dem_name]
@@ -260,6 +265,7 @@ def stitch_dem(
     n_threads_downloading: int = 10,
     fill_in_glo_30: bool = True,
     merge_nodata_value: float = np.nan,
+    fill_to_bounds: bool = False,
 ) -> tuple[np.ndarray, dict]:
     """This is API for stitching DEMs. Specify bounds and various options to obtain a continuous raster.
     The output raster will be determined by availability of tiles. If no tiles are available over bounds,
@@ -292,6 +298,10 @@ def stitch_dem(
         When set to np.nan (default), all areas with nodata in tiles are consistently marked in output as such.
         When set to 0 and converting to ellipsoidal heights, all nodata areas will be filled in with geoid.
         When set to 0 and not converting to ellipsoidal heights, all nodata areas will be 0.
+    fill_to_bounds: bool, options
+        By default, only data from dem tiles within the extent will be returned. `fill_to_bounds = True` will
+        ensure the data is returned for the requested bounds. The fill value is determiend by the 
+        `merge_nodata_value`. 
 
     Returns
     -------
@@ -368,6 +378,7 @@ def stitch_dem(
         dst_resolution=dst_resolution,
         num_threads_reproj=n_threads_reproj,
         merge_nodata_value=merge_nodata_value,
+        fill_to_bounds=fill_to_bounds,
         n_threads_for_reading_tile_data=n_threads_downloading,
     )
 
