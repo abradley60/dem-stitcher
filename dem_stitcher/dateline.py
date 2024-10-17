@@ -27,7 +27,7 @@ def check_4326_bounds(bounds: list) -> bool:
     return True
 
 
-def get_dateline_crossing(bounds: list) -> int:
+def get_dateline_crossing(bounds: list, x_buffer: float =0) -> int:
     """Checks dateline (aka antimeridian) crossing. Returns +/- 180 depending on extents of bounding box provided.
     Assumes only 1 dateline can be crossed otherwise exception raised.
 
@@ -35,6 +35,9 @@ def get_dateline_crossing(bounds: list) -> int:
     ----------
     bounds : list
         xmin, ymin, xmax, ymax in EPSG:4326
+    x_buffer : float
+        longitude buffer to allow values slighly over the dateline.
+        small value of 0.03 required for egm_08 removal at dateline.
 
     Returns
     -------
@@ -55,7 +58,7 @@ def get_dateline_crossing(bounds: list) -> int:
 
     # This logic assumes there is intersection within the standard 4326 CRS.
     # There are exactly 2 * 2 = 4 conditions
-    if (xmin > -180.0208333333333428) and (xmax < 180.020833333333286):
+    if (xmin > -180 - abs(x_buffer)) and (xmax < 180 + abs(x_buffer)):
         return 0
 
     elif (xmin <= -180) and (xmax < 180):

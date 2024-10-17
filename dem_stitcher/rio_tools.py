@@ -340,7 +340,8 @@ def expand_arr_to_bounds(
     trg_left, trg_bottom, trg_right, trg_top = trg_bounds
     # adjust the new bounds with even pixel multiples of existing
     # this will stop small offsets
-    lon_res, lat_res = list(src_profile)[0], list(src_profile)[4]
+    lon_res = abs(list(src_profile['transform'])[0]) 
+    lat_res = abs(list(src_profile['transform'])[4]) 
     trg_left = src_left - int(abs(trg_left-src_left)/lon_res)*lon_res
     trg_right = src_right + int(abs(trg_right-src_right)/lon_res)*lon_res
     trg_bottom = src_bottom - int(abs(trg_bottom-src_bottom)/lat_res)*lat_res
@@ -357,12 +358,21 @@ def expand_arr_to_bounds(
         'height': new_height,
         'transform': transform
     })
-    fill_array = np.full((new_height, new_width), fill_value=fill_value, dtype=src_profile['dtype'])
-    trg_array, trg_profile = merge_arrays_with_geometadata(
+    fill_array = np.full((1, new_height, new_width), fill_value=fill_value, dtype=src_profile['dtype'])
+    print(src_array.shape)
+    print(fill_array.shape)
+    trg_array, merge_profile = merge_arrays_with_geometadata(
         arrays = [src_array, fill_array],
         profiles = [src_profile, fill_profile],
         resampling='bilinear',
         nodata = src_profile['nodata'],
         method='first',
     ) 
+    trg_profile = src_profile.copy()
+    trg_profile['width'] = merge_profile['width']
+    trg_profile['height'] =  merge_profile['height']
+    trg_profile['transform'] = merge_profile['transform']
+    print(trg_array.shape)
+    print(src_profile)
+    print(trg_profile)
     return trg_array, trg_profile

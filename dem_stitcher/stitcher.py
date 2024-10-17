@@ -299,9 +299,10 @@ def stitch_dem(
         When set to 0 and converting to ellipsoidal heights, all nodata areas will be filled in with geoid.
         When set to 0 and not converting to ellipsoidal heights, all nodata areas will be 0.
     fill_to_bounds: bool, options
-        By default, only data from dem tiles within the extent will be returned. `fill_to_bounds = True` will
-        ensure the data is returned for the requested bounds. The fill value is determiend by the 
-        `merge_nodata_value`. 
+        Dafaults to False. Default behaviour is to only return data where dem values exist, meaning the bounds of 
+        the returned array may be different to the requested bounds. `fill_to_bounds = True` will pad the dem data to 
+        the requested bounds. Ror example, if geoid values are wanted over water. The fill value is determined by the 
+        `merge_nodata_value`.
 
     Returns
     -------
