@@ -342,13 +342,22 @@ def expand_arr_to_bounds(
     # this will stop small offsets
     lon_res = abs(list(src_profile['transform'])[0]) 
     lat_res = abs(list(src_profile['transform'])[4]) 
-    trg_left = src_left - int(abs(trg_left-src_left)/lon_res)*lon_res
-    trg_right = src_right + int(abs(trg_right-src_right)/lon_res)*lon_res
-    trg_bottom = src_bottom - int(abs(trg_bottom-src_bottom)/lat_res)*lat_res
-    trg_top = src_top + int(abs(trg_top-src_top)/lat_res)*lat_res
+    trg_left = src_left - int((abs(trg_left-src_left)/lon_res)+1)*lon_res
+    trg_right = src_right + int((abs(trg_right-src_right)/lon_res)-1)*lon_res
+    trg_bottom = src_bottom - int((abs(trg_bottom-src_bottom)/lat_res)+1)*lat_res
+    trg_top = src_top + int((abs(trg_top-src_top)/lat_res)-1)*lat_res
     # Calculate the new width and height, should be integer values
     new_width = int((trg_right - trg_left) / lon_res)
     new_height = int((trg_top - trg_bottom) / lat_res)
+    # see if the new width height is smaller than the original, if so keep old
+    old_width = int((src_right - src_left) / lon_res)
+    old_height = int((src_top - src_bottom) / lat_res)
+    if old_width > new_width:
+        new_width = old_width
+        trg_left =  src_left
+    if old_height > new_height:
+        new_height = old_height
+        trg_top = src_top
     # Define the new transformation matrix
     transform = from_origin(trg_left, trg_top, lon_res, lat_res)
     # Create a new raster dataset with expanded bounds
@@ -359,8 +368,6 @@ def expand_arr_to_bounds(
         'transform': transform
     })
     fill_array = np.full((1, new_height, new_width), fill_value=fill_value, dtype=src_profile['dtype'])
-    print(src_array.shape)
-    print(fill_array.shape)
     trg_array, merge_profile = merge_arrays_with_geometadata(
         arrays = [src_array, fill_array],
         profiles = [src_profile, fill_profile],
@@ -372,7 +379,4 @@ def expand_arr_to_bounds(
     trg_profile['width'] = merge_profile['width']
     trg_profile['height'] =  merge_profile['height']
     trg_profile['transform'] = merge_profile['transform']
-    print(trg_array.shape)
-    print(src_profile)
-    print(trg_profile)
     return trg_array, trg_profile
