@@ -6,7 +6,7 @@ from rasterio import DatasetReader
 from rasterio.crs import CRS
 from rasterio.io import MemoryFile
 from rasterio.warp import Resampling, aligned_target, calculate_default_transform, reproject
-from rasterio.transform import from_origin
+from rasterio.transform import from_origin, from_bounds
 
 from .rio_window import get_array_bounds
 from .merge import merge_arrays_with_geometadata
@@ -339,27 +339,19 @@ def expand_arr_to_bounds(
     # Define the new bounds
     trg_left, trg_bottom, trg_right, trg_top = trg_bounds
     # adjust the new bounds with even pixel multiples of existing
-    # this will stop small offsets
+    # get the lat and lon resolution
     lon_res = abs(list(src_profile['transform'])[0]) 
-    lat_res = abs(list(src_profile['transform'])[4]) 
-    trg_left = src_left - int((abs(trg_left-src_left)/lon_res)+1)*lon_res
-    trg_right = src_right + int((abs(trg_right-src_right)/lon_res)-1)*lon_res
-    trg_bottom = src_bottom - int((abs(trg_bottom-src_bottom)/lat_res)+1)*lat_res
-    trg_top = src_top + int((abs(trg_top-src_top)/lat_res)-1)*lat_res
+    lat_res = abs(list(src_profile['transform'])[4])
+    # get additional pixels to left, right, bottom and top
+    trg_left = src_left - np.floor((abs(trg_left-src_left)/lon_res))*lon_res
+    trg_right = src_right + np.floor((abs(trg_right-src_right)/lon_res))*lon_res
+    trg_bottom = src_bottom - np.floor((abs(trg_bottom-src_bottom)/lat_res))*lat_res
+    trg_top = src_top + np.floor((abs(trg_top-src_top)/lat_res))*lat_res
     # Calculate the new width and height, should be integer values
     new_width = int((trg_right - trg_left) / lon_res)
     new_height = int((trg_top - trg_bottom) / lat_res)
-    # see if the new width height is smaller than the original, if so keep old
-    old_width = int((src_right - src_left) / lon_res)
-    old_height = int((src_top - src_bottom) / lat_res)
-    if old_width > new_width:
-        new_width = old_width
-        trg_left =  src_left
-    if old_height > new_height:
-        new_height = old_height
-        trg_top = src_top
     # Define the new transformation matrix
-    transform = from_origin(trg_left, trg_top, lon_res, lat_res)
+    transform = from_bounds(trg_left, trg_bottom, trg_right, trg_top, new_width, new_height)
     # Create a new raster dataset with expanded bounds
     fill_profile = src_profile.copy()
     fill_profile.update({
